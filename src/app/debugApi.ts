@@ -35,6 +35,12 @@ export interface DebugApi {
   project(x: number, y: number, z: number): { x: number; y: number };
   /** 展示ローカル座標の点を画面上の点（CSS px）に投影する */
   projectLocal(id: ExhibitId, x: number, y: number, z: number): { x: number; y: number };
+  /** 調査・撮影用: カメラを任意の姿勢に置く（歩行・鑑賞の状態はそのまま） */
+  lookFrom(
+    position: [number, number, number],
+    target: [number, number, number],
+    fov?: number,
+  ): void;
   /** 展示の debugPoints を画面上の点（CSS px）に投影する */
   debugPoints(id: ExhibitId): Record<string, { x: number; y: number }>;
 }
@@ -97,6 +103,16 @@ export function installDebugApi(app: App): void {
       entry.group.updateMatrixWorld(true);
       const w = new THREE.Vector3(x, y, z).applyMatrix4(entry.group.matrixWorld);
       return project(app, w.x, w.y, w.z);
+    },
+    lookFrom: (position, target, fov) => {
+      void app.rig.flyTo(
+        {
+          position: new THREE.Vector3(...position),
+          target: new THREE.Vector3(...target),
+          fov: fov ?? app.camera.fov,
+        },
+        0,
+      );
     },
     debugPoints: (id) => {
       const entry = app.exhibits.get(id);

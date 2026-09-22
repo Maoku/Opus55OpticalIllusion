@@ -57,8 +57,8 @@ export interface Exhibit {
   readonly viewMode: ViewMode;
   /** 歩行の障害物（ローカル座標）。台座・ブースなど */
   readonly colliders?: Collider[];
-  /** キャプションプレートの位置（ローカル座標）。null で表示しない */
-  readonly captionAnchor?: { position: Vec3; rotationY?: number } | null;
+  /** キャプションプレートの位置（ローカル座標）。stand で床から支柱を立てる。null で表示しない */
+  readonly captionAnchor?: { position: Vec3; rotationY?: number; stand?: boolean } | null;
   /** 床の「ここから見る」マーク。既定は fixed のときだけ表示する */
   readonly floorMark?: boolean;
 
@@ -66,6 +66,8 @@ export interface Exhibit {
   init(ctx: ExhibitContext): Promise<void>;
   /** 近くにいるとき・鑑賞中だけ呼ばれる */
   update?(dt: number, ctx: ExhibitContext): void;
+  /** 近く（update が呼ばれる範囲）に入ったとき true、離れたとき false で呼ばれる */
+  setActive?(active: boolean): void;
   /** 3D 側のヒント表現（ガイド線など） */
   setHintVisible?(visible: boolean): void;
   /** 種明かしデモ。最後まで再生したら true、中断されたら false */

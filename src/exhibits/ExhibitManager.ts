@@ -7,7 +7,7 @@ import { rectCollider } from '../world/collision';
 import type { WorldPose } from '../player/CameraRig';
 import { REGISTRY } from './registry';
 import type { CameraShot, Exhibit, ExhibitContext, Vec3 } from './types';
-import { createCaptionPlate, createFloorMark } from './common/caption';
+import { createCaptionPlate, createCaptionStand, createFloorMark } from './common/caption';
 import { localViewPose, type ViewportSpec } from './viewPose';
 
 /** 近くの展示とみなす距離（m） */
@@ -28,6 +28,8 @@ export interface ExhibitEntry {
   group: THREE.Group;
   state: 'idle' | 'loading' | 'ready';
   ready: Promise<void> | null;
+  /** update を呼ぶ範囲にいるか */
+  active: boolean;
   /** 注視点（世界座標） */
   focus: THREE.Vector3;
 }
@@ -66,6 +68,7 @@ export class ExhibitManager {
         group,
         state: 'idle',
         ready: null,
+        active: false,
         focus: this.toWorld(group, target),
       };
       this.entries.push(entry);
@@ -212,8 +215,13 @@ export class ExhibitManager {
     for (const e of this.entries) {
       const d = Math.hypot(e.focus.x - playerPos.x, e.focus.z - playerPos.z);
       if (e.state === 'idle' && d < PRELOAD_DISTANCE) void this.ensureReady(e.id);
-      if (e.state !== 'ready' || !e.exhibit.update) continue;
-      if (e.id === activeId || d < ACTIVE_DISTANCE) e.exhibit.update(dt, this.contextFor(e));
+      if (e.state !== 'ready') continue;
+      const active = e.id === activeId || d < ACTIVE_DISTANCE;
+      if (active !== e.active) {
+        e.active = active;
+        e.exhibit.setActive?.(active);
+      }
+      if (active) e.exhibit.update?.(dt, this.contextFor(e));
     }
   }
 
@@ -242,6 +250,8 @@ export class ExhibitManager {
       plate.position.set(...anchor.position);
       plate.rotation.y = anchor.rotationY ?? 0;
       group.add(plate);
+      if ('stand' in anchor && anchor.stand)
+        group.add(createCaptionStand(anchor.position, anchor.rotationY ?? 0));
     }
     const wantsMark = exhibit.floorMark ?? mode.kind === 'fixed';
     if (wantsMark && mode.kind === 'fixed') {

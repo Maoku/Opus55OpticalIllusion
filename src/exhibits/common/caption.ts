@@ -68,6 +68,26 @@ export function createCaptionPlate(content: ExhibitContent): THREE.Group {
   return group;
 }
 
+/** 壁のない場所に立てるキャプションの支柱（プレートは少し後ろに傾ける） */
+export function createCaptionStand(
+  position: readonly [number, number, number],
+  rotationY: number,
+): THREE.Group {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x1d1d1f, roughness: 0.5, metalness: 0.4 });
+  const h = position[1] - PLATE_H / 2;
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.03, h, 0.03), mat);
+  post.position.set(0, h / 2, -0.02);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.012, 0.22), mat);
+  base.position.set(0, 0.006, -0.02);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(PLATE_W + 0.02, PLATE_H + 0.02, 0.012), mat);
+  back.position.set(0, h + PLATE_H / 2, -0.004);
+  g.add(post, base, back);
+  g.position.set(position[0], 0, position[2]);
+  g.rotation.y = rotationY;
+  return g;
+}
+
 let markTexture: THREE.CanvasTexture | null = null;
 
 function getMarkTexture(): THREE.CanvasTexture {

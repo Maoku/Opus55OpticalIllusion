@@ -86,6 +86,7 @@ export function projectToCanvas(
   width: number,
   height: number,
 ): { x: number; y: number } {
+  camera.updateMatrixWorld(true);
   const v = new THREE.Vector3(p.x, p.y, p.z).project(camera);
   return { x: ((v.x + 1) / 2) * width, y: ((1 - v.y) / 2) * height };
 }
