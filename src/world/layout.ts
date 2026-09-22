@@ -164,15 +164,6 @@ export const SIGNS: SignDef[] = [
     subtitle: 'ORIGINAL ROOM',
     width: 5,
   },
-  {
-    x: 0,
-    y: 6.2,
-    z: -7.98,
-    rotation: 0,
-    title: 'OPTICAL ILLUSION MUSEUM',
-    subtitle: '錯視美術館',
-    width: 9,
-  },
 ];
 
 export interface ExhibitPlacement {
@@ -210,7 +201,8 @@ export const EXHIBIT_PLACEMENTS: ExhibitPlacement[] = [
 ];
 
 /** 入館直後の位置と向き（yaw = 0 で北 = -Z を向く） */
-export const SPAWN = { x: 0, z: 12.6, yaw: 0 };
+// E-1 の床マーク（z = 5.2）の少し手前。来館者が自分でマークを見つけて立つ導入にする
+export const SPAWN = { x: 0, z: 10.8, yaw: 0 };
 
 // ---------------------------------------------------------------------------
 // 純粋関数
