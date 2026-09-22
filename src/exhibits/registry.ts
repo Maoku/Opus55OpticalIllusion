@@ -8,6 +8,7 @@ import { PeripheralDriftExhibit } from './a5-peripheral-drift';
 import { AfterimageExhibit } from './a6-afterimage';
 import { AmesRoomExhibit } from './b1-ames-room';
 import { ImpossibleTriangleExhibit } from './b2-impossible-triangle';
+import { CheckerShadowExhibit } from './b3-checker-shadow';
 
 /** 展示 ID → ファクトリ。ここに登録した展示が館内に配置される */
 export const REGISTRY: Partial<Record<ExhibitId, ExhibitFactory>> = {
@@ -19,6 +20,7 @@ export const REGISTRY: Partial<Record<ExhibitId, ExhibitFactory>> = {
   afterimage: () => new AfterimageExhibit(),
   'ames-room': () => new AmesRoomExhibit(),
   'impossible-triangle': () => new ImpossibleTriangleExhibit(),
+  'checker-shadow': () => new CheckerShadowExhibit(),
 };
 
 export function registeredIds(): ExhibitId[] {
