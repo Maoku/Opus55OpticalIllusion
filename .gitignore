@@ -7,3 +7,4 @@ playwright-report/
 test-results/
 blob-report/
 Docs/screenshots/
+dist-e2e/
