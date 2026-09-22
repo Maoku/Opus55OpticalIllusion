@@ -1,20 +1,18 @@
 import { test, expect } from '@playwright/test';
+import { openMuseum, waitForMode } from './helpers';
 
-test('起動するとコンソールエラーなしで WebGL2 のキャンバスが表示される', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(msg.text());
-  });
-  page.on('pageerror', (err) => errors.push(err.message));
-
-  await page.goto('/');
-  const canvas = page.locator('#app canvas');
-  await expect(canvas).toBeVisible();
+test('起動するとコンソールエラーなしで WebGL2 のキャンバスとスタート画面が表示される', async ({
+  page,
+}) => {
+  const errors = await openMuseum(page);
+  await waitForMode(page, 'start');
+  await expect(page.locator('#app canvas')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '錯視美術館' })).toBeVisible();
+  await expect(page.getByTestId('enter')).toBeVisible();
 
   const isWebGL2 = await page.evaluate(() => {
     const c = document.querySelector('#app canvas') as HTMLCanvasElement | null;
-    const gl = c?.getContext('webgl2');
-    return !!gl;
+    return !!c?.getContext('webgl2');
   });
   expect(isWebGL2).toBe(true);
   expect(errors).toEqual([]);

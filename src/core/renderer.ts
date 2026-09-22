@@ -29,7 +29,7 @@ export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   // 影を落とすのは静的な建築だけなので、最初に 1 回だけ更新する（§10）
   renderer.shadowMap.autoUpdate = false;
   renderer.setSize(container.clientWidth, container.clientHeight);

@@ -1,23 +1,19 @@
-import * as THREE from 'three';
 import './styles/base.css';
+import './styles/ui.css';
+import { App } from './app/App';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('#app が見つかりません');
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-container.appendChild(renderer.domElement);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf4f2ee);
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 200);
-camera.position.set(0, 1.6, 4);
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+const app = new App(container);
+if (import.meta.env.DEV || import.meta.env.MODE === 'e2e') {
+  void import('./app/debugApi').then(({ installDebugApi }) => installDebugApi(app));
+}
+app.init().catch((err: unknown) => {
+  console.error(err);
+  const msg = document.createElement('p');
+  msg.className = 'fatal';
+  msg.textContent =
+    'このブラウザでは 3D 表示を開始できませんでした。WebGL2 に対応した最新のブラウザでお試しください。';
+  document.body.appendChild(msg);
 });
-
-renderer.setAnimationLoop(() => renderer.render(scene, camera));
