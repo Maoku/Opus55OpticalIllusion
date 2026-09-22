@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+temp/
+playwright-report/
+test-results/
+blob-report/
+Docs/screenshots/
