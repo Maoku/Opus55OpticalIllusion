@@ -75,6 +75,8 @@ export interface Exhibit {
   onExitView?(): void;
   /** 鑑賞中のクリック・タップ。座標は正規化デバイス座標（-1〜1） */
   onViewClick?(ndc: { x: number; y: number }): void;
+  /** テスト用の名前付きの点（展示ローカル座標）。E2E で画素値を調べる位置など */
+  readonly debugPoints?: Record<string, Vec3>;
   /** 鑑賞パネルに追加する操作（例: 残像の「はじめる」） */
   readonly panelActions?: PanelAction[];
   dispose(): void;

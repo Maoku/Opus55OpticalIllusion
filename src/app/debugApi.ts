@@ -35,6 +35,8 @@ export interface DebugApi {
   project(x: number, y: number, z: number): { x: number; y: number };
   /** 展示ローカル座標の点を画面上の点（CSS px）に投影する */
   projectLocal(id: ExhibitId, x: number, y: number, z: number): { x: number; y: number };
+  /** 展示の debugPoints を画面上の点（CSS px）に投影する */
+  debugPoints(id: ExhibitId): Record<string, { x: number; y: number }>;
 }
 
 declare global {
@@ -95,6 +97,17 @@ export function installDebugApi(app: App): void {
       entry.group.updateMatrixWorld(true);
       const w = new THREE.Vector3(x, y, z).applyMatrix4(entry.group.matrixWorld);
       return project(app, w.x, w.y, w.z);
+    },
+    debugPoints: (id) => {
+      const entry = app.exhibits.get(id);
+      if (!entry) throw new Error(`未登録の展示です: ${id}`);
+      entry.group.updateMatrixWorld(true);
+      const out: Record<string, { x: number; y: number }> = {};
+      for (const [name, p] of Object.entries(entry.exhibit.debugPoints ?? {})) {
+        const w = new THREE.Vector3(p[0], p[1], p[2]).applyMatrix4(entry.group.matrixWorld);
+        out[name] = project(app, w.x, w.y, w.z);
+      }
+      return out;
     },
   };
   window.__OIM__ = api;
