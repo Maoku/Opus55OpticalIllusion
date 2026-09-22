@@ -40,4 +40,13 @@ test.describe('視点に依存する作品の画素・位置の検証', () => {
     const right = Math.abs(p.dollRightFoot!.y - p.dollRightTop!.y);
     expect(right / left).toBeGreaterThan(2);
   });
+
+  test('C-2: 暗室の画面に赤が優位な画素が 1 つもない', async ({ page }) => {
+    await openMuseum(page);
+    await enterMuseum(page);
+    await openAndSettle(page, 'colorless-fruit');
+    const r = await page.evaluate(() => window.__OIM__!.countRedPixels(3));
+    expect(r.total).toBeGreaterThan(100_000);
+    expect(r.red).toBe(0);
+  });
 });
