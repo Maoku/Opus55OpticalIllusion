@@ -6,6 +6,8 @@
  * 高さが違う部屋が接する開口部の上には、高いほうの部屋の垂れ壁（まぐさ）をつくる。
  */
 
+import type { ExhibitId } from '../content/types';
+
 export type ZoneId = 'entrance' | 'hall' | 'zoneA' | 'zoneB' | 'zoneC' | 'corridor';
 
 export interface Rect {
@@ -130,8 +132,8 @@ export const FURNITURE: FurnitureDef[] = [
   { kind: 'counter', x: 6.5, z: 5, rotation: -Math.PI / 2 },
   { kind: 'bench', x: -33, z: 0, rotation: 0 },
   { kind: 'bench', x: -25, z: 0, rotation: 0 },
-  { kind: 'bench', x: 26, z: 7.5, rotation: 0 },
-  { kind: 'bench', x: -6, z: -17.5, rotation: 0 },
+  { kind: 'bench', x: 34, z: 9.5, rotation: 0 },
+  { kind: 'bench', x: -6, z: -26.2, rotation: 0 },
 ];
 
 export const SIGNS: SignDef[] = [
@@ -171,6 +173,40 @@ export const SIGNS: SignDef[] = [
     subtitle: '錯視美術館',
     width: 9,
   },
+];
+
+export interface ExhibitPlacement {
+  id: ExhibitId;
+  /** 展示のローカル原点（床面） */
+  x: number;
+  z: number;
+  /** 展示の正面（ローカル +Z）の向き。0 = 南（+Z）、π = 北、π/2 = 東、-π/2 = 西 */
+  rotation: number;
+}
+
+const N = Math.PI;
+const W = -Math.PI / 2;
+
+/** 展示の配置。並び順が推奨の順路（前後の作品）になる */
+export const EXHIBIT_PLACEMENTS: ExhibitPlacement[] = [
+  { id: 'welcome-anamorphosis', x: 0, z: 0, rotation: 0 },
+  // Zone A: 北の壁を東から西へ、南の壁を西から東へ一周する
+  { id: 'cafe-wall', x: -20, z: -6, rotation: 0 },
+  { id: 'ebbinghaus', x: -29, z: -6, rotation: 0 },
+  { id: 'muller-lyer', x: -38, z: -6, rotation: 0 },
+  { id: 'scintillating-grid', x: -38, z: 6, rotation: N },
+  { id: 'peripheral-drift', x: -29, z: 6, rotation: N },
+  { id: 'afterimage', x: -20, z: 6, rotation: N },
+  // Zone B
+  { id: 'ames-room', x: 20, z: -8, rotation: 0 },
+  { id: 'impossible-triangle', x: 30.5, z: -8, rotation: 0 },
+  { id: 'checker-shadow', x: 27, z: 6.5, rotation: N },
+  { id: 'reverspective', x: 20, z: 12, rotation: N },
+  { id: 'shadow-spinner', x: 38, z: -6, rotation: W },
+  // Zone C
+  { id: 'circle-heart', x: -5, z: -22, rotation: 0 },
+  { id: 'colorless-fruit', x: 7.6, z: -24.6, rotation: W },
+  { id: 'invisible-triangle', x: 10, z: -17.5, rotation: W },
 ];
 
 /** 入館直後の位置と向き（yaw = 0 で北 = -Z を向く） */
