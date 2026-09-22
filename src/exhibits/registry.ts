@@ -14,6 +14,7 @@ import { ReverspectiveExhibit } from './b4-reverspective';
 import { ShadowSpinnerExhibit } from './b5-shadow-spinner';
 import { CircleHeartExhibit } from './c1-circle-heart';
 import { ColorlessFruitExhibit } from './c2-colorless-fruit';
+import { InvisibleTriangleExhibit } from './c3-invisible-triangle';
 
 /** 展示 ID → ファクトリ。ここに登録した展示が館内に配置される */
 export const REGISTRY: Partial<Record<ExhibitId, ExhibitFactory>> = {
@@ -31,6 +32,7 @@ export const REGISTRY: Partial<Record<ExhibitId, ExhibitFactory>> = {
   'shadow-spinner': () => new ShadowSpinnerExhibit(),
   'circle-heart': () => new CircleHeartExhibit(),
   'colorless-fruit': () => new ColorlessFruitExhibit(),
+  'invisible-triangle': () => new InvisibleTriangleExhibit(),
 };
 
 export function registeredIds(): ExhibitId[] {
