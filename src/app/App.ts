@@ -52,6 +52,7 @@ export class App {
   private readonly loop: Loop;
   private readonly uiRoot: HTMLElement;
   private readonly fadeEl: HTMLElement;
+  private hud: Hud | null = null;
   private museum: Museum | null = null;
   private lighting: LightingRig | null = null;
   /** ポインタロックが使えない環境（タッチ端末・拒否された場合）ではドラッグで見回す */
@@ -329,12 +330,12 @@ export class App {
       openMap: () => undefined,
       openSettings: () => undefined,
     });
-    const hud = new Hud(this.store, {
+    const hud = (this.hud = new Hud(this.store, {
       viewNearby: () => {
         const near = this.store.get().nearbyExhibitId as ExhibitId | null;
         if (near) void this.openExhibit(near);
       },
-    });
+    }));
     const panel = new ExhibitPanel(
       this.store,
       {
@@ -434,6 +435,7 @@ export class App {
     const exhibits = this.exhibits;
     const camera = this.camera;
     const textureSize = () => this.textureSize;
+    const notify = (message: string, swatch?: string) => this.hud?.toast(message, swatch);
     return {
       renderer: this.renderer,
       camera,
@@ -447,6 +449,7 @@ export class App {
       get reducedMotion() {
         return store.get().settings.reducedMotion;
       },
+      notify,
       rig: {
         flyTo: (shot, duration = 1.4, signal) =>
           rig.flyTo(exhibits.shotToWorld(entry.id, shot, camera.fov), duration, signal),

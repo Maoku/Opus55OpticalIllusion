@@ -14,6 +14,10 @@ export class Hud {
   private readonly crosshair: HTMLElement;
   private readonly prompt: HTMLButtonElement;
   private readonly promptTitle: HTMLElement;
+  private readonly toastEl: HTMLElement;
+  private readonly toastText: HTMLElement;
+  private readonly toastSwatch: HTMLElement;
+  private toastTimer = 0;
 
   constructor(store: Store, actions: HudActions) {
     this.crosshair = h('div', { class: 'hud__crosshair', attrs: { 'aria-hidden': 'true' } });
@@ -32,7 +36,15 @@ export class Hud {
         this.promptTitle,
       ],
     );
-    this.el = h('div', { class: 'hud' }, [this.crosshair, this.zone, this.prompt]);
+    this.toastSwatch = h('span', { class: 'hud__swatch', attrs: { 'aria-hidden': 'true' } });
+    this.toastText = h('span');
+    this.toastEl = h(
+      'p',
+      { class: 'hud__toast', attrs: { role: 'status', 'data-testid': 'toast' } },
+      [this.toastSwatch, this.toastText],
+    );
+    this.toastEl.hidden = true;
+    this.el = h('div', { class: 'hud' }, [this.crosshair, this.zone, this.prompt, this.toastEl]);
 
     const render = () => {
       const s = store.get();
@@ -50,5 +62,15 @@ export class Hud {
     };
     store.subscribe(render);
     render();
+  }
+
+  /** 画面下部に数秒だけお知らせを出す */
+  toast(message: string, swatch?: string, seconds = 6): void {
+    this.toastText.textContent = message;
+    this.toastSwatch.hidden = !swatch;
+    if (swatch) this.toastSwatch.style.background = swatch;
+    this.toastEl.hidden = false;
+    window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => (this.toastEl.hidden = true), seconds * 1000);
   }
 }

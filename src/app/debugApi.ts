@@ -31,6 +31,14 @@ export interface DebugApi {
    * E2E ビルドでは preserveDrawingBuffer が有効なので、最後に描いたフレームを読める
    */
   readPixel(x: number, y: number): [number, number, number, number];
+  /**
+   * 画面全体（最後に描いたフレーム）で、赤が優位な画素（R が G と B より margin 以上大きい）を数える。
+   * region を指定すると、その範囲（CSS px）だけを調べる
+   */
+  countRedPixels(
+    margin?: number,
+    region?: { x: number; y: number; w: number; h: number },
+  ): { red: number; total: number };
   /** 世界座標の点を画面上の点（CSS px）に投影する */
   project(x: number, y: number, z: number): { x: number; y: number };
   /** 展示ローカル座標の点を画面上の点（CSS px）に投影する */
@@ -95,6 +103,24 @@ export function installDebugApi(app: App): void {
       const out = new Uint8Array(4);
       gl.readPixels(px, py, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, out);
       return [out[0]!, out[1]!, out[2]!, out[3]!];
+    },
+    countRedPixels: (margin = 3, region) => {
+      const gl = app.renderer.getContext();
+      const dpr = app.renderer.getPixelRatio();
+      const W = gl.drawingBufferWidth;
+      const H = gl.drawingBufferHeight;
+      const x0 = region ? Math.max(0, Math.round(region.x * dpr)) : 0;
+      const w = region ? Math.min(W - x0, Math.round(region.w * dpr)) : W;
+      const yTop = region ? Math.round(region.y * dpr) : 0;
+      const h = region ? Math.min(H - yTop, Math.round(region.h * dpr)) : H;
+      const data = new Uint8Array(w * h * 4);
+      gl.readPixels(x0, H - yTop - h, w, h, gl.RGBA, gl.UNSIGNED_BYTE, data);
+      let red = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i]!;
+        if (r > data[i + 1]! + margin && r > data[i + 2]! + margin) red++;
+      }
+      return { red, total: w * h };
     },
     project: (x, y, z) => project(app, x, y, z),
     projectLocal: (id, x, y, z) => {

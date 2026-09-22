@@ -47,6 +47,8 @@ export interface ExhibitContext {
   textureSize: number;
   reducedMotion: boolean;
   rig: ExhibitCameraControl;
+  /** 画面下部に短いお知らせを出す（swatch は色見本の CSS 色） */
+  notify(message: string, swatch?: string): void;
 }
 
 export interface Exhibit {
