@@ -166,7 +166,21 @@ function buildWall(piece: WallPiece, b: GeoBuckets, darkRooms: Set<string>): voi
     push(b, 'wall', box(r.x0, gap, r.z0, r.x1, y1, r.z1));
     return;
   }
-  push(b, dark ? 'darkWall' : 'wall', box(r.x0, y0, r.z0, r.x1, y1, r.z1));
+  push(b, 'wall', box(r.x0, y0, r.z0, r.x1, y1, r.z1));
+  if (dark && piece.kind !== 'corner') {
+    // 暗室の内側だけに黒い内張りを貼る。壁の本体は白いまま（隣の部屋と共有する壁で色がちらつかない）
+    const a = 0.004;
+    const c = 0.014;
+    const liner =
+      piece.side === 'north'
+        ? box(r.x0, y0, r.z1 + a, r.x1, y1, r.z1 + c)
+        : piece.side === 'south'
+          ? box(r.x0, y0, r.z0 - c, r.x1, y1, r.z0 - a)
+          : piece.side === 'west'
+            ? box(r.x1 + a, y0, r.z0, r.x1 + c, y1, r.z1)
+            : box(r.x0 - c, y0, r.z0, r.x0 - a, y1, r.z1);
+    push(b, 'darkWall', liner);
+  }
 }
 
 function buildFurniture(f: FurnitureDef, b: GeoBuckets): Collider[] {
