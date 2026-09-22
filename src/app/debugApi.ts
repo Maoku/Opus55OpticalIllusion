@@ -1,5 +1,7 @@
+import * as THREE from 'three';
 import type { App } from './App';
-import type { AppState } from './store';
+import type { AppState, HintStage } from './store';
+import type { ExhibitId } from '../content/types';
 
 /**
  * テスト用 API（開発ビルドと E2E ビルドだけで有効）。
@@ -14,6 +16,25 @@ export interface DebugApi {
   hold(code: string, ms: number): Promise<void>;
   fps(): number;
   renderInfo(): { calls: number; triangles: number; textures: number; geometries: number };
+  /** 館内に配置されている展示（順路順） */
+  exhibitIds(): ExhibitId[];
+  openExhibit(id: ExhibitId): Promise<void>;
+  closeExhibit(): Promise<void>;
+  setHintStage(stage: HintStage): void;
+  playDemo(): Promise<void>;
+  /** 展示の初期化が終わるまで待つ */
+  whenReady(id: ExhibitId): Promise<void>;
+  /** 描画をもう 1 フレーム進める */
+  nextFrame(): Promise<void>;
+  /**
+   * 画面上の点（CSS px）の画素値を読む（sRGB, 0〜255）。
+   * E2E ビルドでは preserveDrawingBuffer が有効なので、最後に描いたフレームを読める
+   */
+  readPixel(x: number, y: number): [number, number, number, number];
+  /** 世界座標の点を画面上の点（CSS px）に投影する */
+  project(x: number, y: number, z: number): { x: number; y: number };
+  /** 展示ローカル座標の点を画面上の点（CSS px）に投影する */
+  projectLocal(id: ExhibitId, x: number, y: number, z: number): { x: number; y: number };
 }
 
 declare global {
@@ -51,6 +72,40 @@ export function installDebugApi(app: App): void {
         geometries: info.memory.geometries,
       };
     },
+    exhibitIds: () => app.exhibits.ids(),
+    openExhibit: (id) => app.openExhibit(id),
+    closeExhibit: () => app.closeExhibit(),
+    setHintStage: (stage) => app.setHintStage(stage),
+    playDemo: () => app.playDemo(),
+    whenReady: (id) => app.exhibits.ensureReady(id),
+    nextFrame: () => new Promise((r) => requestAnimationFrame(() => r())),
+    readPixel: (x, y) => {
+      const gl = app.renderer.getContext();
+      const dpr = app.renderer.getPixelRatio();
+      const px = Math.round(x * dpr);
+      const py = Math.round(gl.drawingBufferHeight - y * dpr);
+      const out = new Uint8Array(4);
+      gl.readPixels(px, py, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, out);
+      return [out[0]!, out[1]!, out[2]!, out[3]!];
+    },
+    project: (x, y, z) => project(app, x, y, z),
+    projectLocal: (id, x, y, z) => {
+      const entry = app.exhibits.get(id);
+      if (!entry) throw new Error(`未登録の展示です: ${id}`);
+      entry.group.updateMatrixWorld(true);
+      const w = new THREE.Vector3(x, y, z).applyMatrix4(entry.group.matrixWorld);
+      return project(app, w.x, w.y, w.z);
+    },
   };
   window.__OIM__ = api;
+}
+
+function project(app: App, x: number, y: number, z: number): { x: number; y: number } {
+  app.camera.updateMatrixWorld(true);
+  const ndc = new THREE.Vector3(x, y, z).project(app.camera);
+  const rect = app.renderer.domElement.getBoundingClientRect();
+  return {
+    x: rect.left + ((ndc.x + 1) / 2) * rect.width,
+    y: rect.top + ((1 - ndc.y) / 2) * rect.height,
+  };
 }
