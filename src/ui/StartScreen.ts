@@ -1,11 +1,25 @@
-import type { Store } from '../app/store';
+import type { Settings, Store } from '../app/store';
 import { h, show } from './dom';
 
 export class StartScreen {
   readonly el: HTMLElement;
   readonly enterButton: HTMLButtonElement;
 
-  constructor(store: Store, onEnter: () => void) {
+  constructor(store: Store, onEnter: () => void, onSettings: (patch: Partial<Settings>) => void) {
+    const toggle = (id: string, label: string, onChange: (v: boolean) => void) => {
+      const input = h('input', { id, attrs: { type: 'checkbox' } });
+      input.addEventListener('change', () => onChange(input.checked));
+      return {
+        input,
+        el: h('label', { class: 'start__toggle', attrs: { for: id } }, [input, label]),
+      };
+    };
+    const reduced = toggle('start-reduced', '動きを減らす', (v) =>
+      onSettings({ reducedMotion: v }),
+    );
+    const sound = toggle('start-sound', 'サウンド（環境音・足音）', (v) =>
+      onSettings({ muted: !v }),
+    );
     this.enterButton = h('button', {
       class: 'btn btn--primary btn--large',
       text: '入館する',
@@ -56,7 +70,7 @@ export class StartScreen {
                 text: '一部の作品には、ちらつきや動いて見える図柄があります。光に敏感な方は、気分が悪くなったらすぐに鑑賞をやめてください。',
               }),
               h('li', {
-                text: '3D 空間の移動で酔いやすい方は、設定の「動きを減らす」をお使いください。',
+                text: '3D 空間の移動で酔いやすい方は、下の「動きを減らす」をオンにしてください（あとから設定でも変えられます）。',
               }),
               h('li', {
                 text: '錯視の見え方には個人差があります。うまく見えなくても異常ではありません。',
@@ -64,11 +78,19 @@ export class StartScreen {
             ]),
           ]),
         ]),
-        h('div', { class: 'start__actions' }, [this.enterButton]),
+        h('div', { class: 'start__actions' }, [
+          h('div', { class: 'start__toggles' }, [reduced.el, sound.el]),
+          this.enterButton,
+        ]),
       ]),
     ]);
 
-    const render = () => show(this.el, store.get().mode === 'start');
+    const render = () => {
+      const st = store.get();
+      show(this.el, st.mode === 'start');
+      reduced.input.checked = st.settings.reducedMotion;
+      sound.input.checked = !st.settings.muted;
+    };
     store.subscribe(render);
     render();
   }

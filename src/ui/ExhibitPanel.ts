@@ -41,6 +41,7 @@ export class ExhibitPanel {
   private readonly demoBtn: HTMLButtonElement;
   private readonly demoLabel: HTMLElement;
   private renderedId: ExhibitId | null = null;
+  private lastStage: HintStage = 'hidden';
 
   constructor(
     private readonly store: Store,
@@ -219,6 +220,13 @@ export class ExhibitPanel {
 
     const stage = s.hintStage;
     const open = stage !== 'hidden';
+    if (stage !== this.lastStage && stage !== 'hidden') {
+      // 開いた部分が見えるようにスクロールする（下部シートでは隠れやすい）
+      const target = stage === 'mechanism' ? this.mechBody : this.hintBody;
+      const behavior = s.settings.reducedMotion ? 'auto' : 'smooth';
+      requestAnimationFrame(() => target.scrollIntoView({ block: 'nearest', behavior }));
+    }
+    this.lastStage = stage;
     this.hintToggle.setAttribute('aria-expanded', String(open));
     this.hintToggle.textContent = open ? 'ヒントを隠す' : '見え方のヒント';
     this.hintBody.hidden = !open;

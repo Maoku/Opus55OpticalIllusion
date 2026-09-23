@@ -1,9 +1,18 @@
 import * as THREE from 'three';
-import { Store, createInitialState, DEFAULT_SETTINGS, type HintStage, type Quality } from './store';
+import {
+  Store,
+  createInitialState,
+  type AppMode,
+  type HintStage,
+  type Quality,
+  type Settings,
+} from './store';
+import { clearSaved, loadSaved, save } from './persistence';
 import { applyQuality, createRenderer, detectQuality, QUALITY_PRESETS } from '../core/renderer';
 import { InputManager } from '../core/input';
 import { Loop } from '../core/loop';
 import { tweens } from '../core/tween';
+import { MuseumAudio } from '../core/audio';
 import { CollisionWorld } from '../world/collision';
 import { buildMuseum, type Museum } from '../world/buildMuseum';
 import { createExterior, createLighting, type LightingRig } from '../world/lighting';
@@ -19,6 +28,9 @@ import { StartScreen } from '../ui/StartScreen';
 import { PauseScreen } from '../ui/PauseScreen';
 import { Hud } from '../ui/Hud';
 import { ExhibitPanel } from '../ui/ExhibitPanel';
+import { FloorMap } from '../ui/FloorMap';
+import { SettingsPanel } from '../ui/SettingsPanel';
+import { TouchControls } from '../ui/TouchControls';
 
 function parseQuality(value: string | null): Quality | null {
   return value === 'low' || value === 'medium' || value === 'high' ? value : null;
@@ -38,6 +50,10 @@ const VIEW_TRANSITION = 0.8;
 const FLY_LIMIT = 12;
 /** 横ずらしの速さ（m/s） */
 const SHIFT_SPEED = 0.9;
+/** 画質の自動調整: この FPS を下回り続けたら 1 段下げる */
+const AUTO_QUALITY_FPS = 38;
+const AUTO_QUALITY_SECONDS = 4;
+const QUALITY_ORDER: Quality[] = ['low', 'medium', 'high'];
 
 export class App {
   readonly store: Store;
@@ -53,6 +69,12 @@ export class App {
   private readonly uiRoot: HTMLElement;
   private readonly fadeEl: HTMLElement;
   private hud: Hud | null = null;
+  readonly audio = new MuseumAudio();
+  /** マップ・設定を閉じたときに戻るモード */
+  private overlayReturn: AppMode = 'walking';
+  /** 低 FPS が続いている時間（秒） */
+  private slowTime = 0;
+  private readonly touch: boolean;
   private museum: Museum | null = null;
   private lighting: LightingRig | null = null;
   /** ポインタロックが使えない環境（タッチ端末・拒否された場合）ではドラッグで見回す */
@@ -64,14 +86,24 @@ export class App {
 
   constructor(private readonly container: HTMLElement) {
     this.renderer = createRenderer(container);
+    const { saved, hadSettings } = loadSaved();
+    const settings = saved.settings;
+    // 初めての来館では、OS の「視差効果を減らす」を初期値に反映する（§7.4）
+    if (!hadSettings) {
+      settings.reducedMotion =
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    }
     const forced = parseQuality(this.params.get('quality'));
-    const quality = forced ?? detectQuality(this.renderer);
-    const settings = { ...DEFAULT_SETTINGS };
     if (forced) settings.quality = forced;
-    settings.reducedMotion =
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    this.store = new Store(createInitialState(settings, quality));
+    const quality =
+      settings.quality === 'auto' ? detectQuality(this.renderer) : (settings.quality as Quality);
+    this.store = new Store({
+      ...createInitialState(settings, quality),
+      visited: saved.visited,
+      hintViewed: saved.hintViewed,
+    });
     applyQuality(this.renderer, quality);
+    this.touch = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 
     this.camera = new THREE.PerspectiveCamera(
       settings.fov,
@@ -109,6 +141,7 @@ export class App {
 
     this.createUi();
     this.bindEvents();
+    this.bindPersistence();
   }
 
   get fps(): number {
@@ -162,6 +195,93 @@ export class App {
   enter(): void {
     this.store.set({ mode: 'walking' });
     this.lockPointer();
+    // 自動再生の制限があるので、ユーザー操作の中で音声を始める
+    this.audio.start(this.store.get().settings.muted);
+  }
+
+  // -------------------------------------------------------------------------
+  // フロアマップと設定
+  // -------------------------------------------------------------------------
+
+  private openOverlay(mode: 'map' | 'settings'): void {
+    const s = this.store.get();
+    if (s.mode === 'loading' || s.mode === 'start' || this.transitioning) return;
+    if (s.mode !== 'map' && s.mode !== 'settings') this.overlayReturn = s.mode;
+    this.input.exitPointerLock();
+    this.input.clearKeys();
+    this.store.set({ mode });
+  }
+
+  private closeOverlay(): void {
+    const back = this.overlayReturn;
+    this.store.set({ mode: back });
+    if (back === 'walking') this.lockPointer();
+  }
+
+  openMap(): void {
+    this.openOverlay('map');
+  }
+
+  openSettings(): void {
+    this.openOverlay('settings');
+  }
+
+  /** マップで選んだ作品へワープする */
+  async warpTo(id: ExhibitId): Promise<void> {
+    this.store.set({ mode: 'walking' });
+    await this.openExhibit(id);
+  }
+
+  updateSettings(patch: Partial<Settings>): void {
+    const prev = this.store.get().settings;
+    this.store.updateSettings(patch);
+    const next = this.store.get().settings;
+    if (patch.quality && patch.quality !== prev.quality) {
+      const q = next.quality === 'auto' ? detectQuality(this.renderer) : (next.quality as Quality);
+      this.setQuality(q);
+    }
+    if (patch.muted !== undefined && patch.muted !== prev.muted) {
+      if (!next.muted) this.audio.start(false);
+      else this.audio.setMuted(true);
+    }
+  }
+
+  private setQuality(q: Quality): void {
+    if (q === this.store.get().quality) return;
+    this.store.set({ quality: q });
+    applyQuality(this.renderer, q);
+    this.resize();
+    const size = QUALITY_PRESETS[q].shadowMapSize;
+    const sun = this.lighting?.sun;
+    if (sun && sun.shadow.mapSize.x !== size) {
+      sun.shadow.mapSize.set(size, size);
+      sun.shadow.map?.dispose();
+      sun.shadow.map = null;
+      this.renderer.shadowMap.needsUpdate = true;
+    }
+  }
+
+  resetProgress(): void {
+    this.store.set({ visited: [], hintViewed: [] });
+    clearSaved();
+    this.saveNow();
+  }
+
+  private saveNow(): void {
+    const s = this.store.get();
+    save({ settings: s.settings, visited: s.visited, hintViewed: s.hintViewed });
+  }
+
+  private bindPersistence(): void {
+    this.store.subscribe((s, prev) => {
+      if (
+        s.settings !== prev.settings ||
+        s.visited !== prev.visited ||
+        s.hintViewed !== prev.hintViewed
+      ) {
+        this.saveNow();
+      }
+    });
   }
 
   resume(): void {
@@ -324,17 +444,34 @@ export class App {
 
   private createUi(): void {
     const loading = new LoadingScreen(this.store);
-    const start = new StartScreen(this.store, () => this.enter());
+    const start = new StartScreen(
+      this.store,
+      () => this.enter(),
+      (patch) => this.updateSettings(patch),
+    );
     const pause = new PauseScreen(this.store, {
       resume: () => this.resume(),
-      openMap: () => undefined,
-      openSettings: () => undefined,
+      openMap: () => this.openMap(),
+      openSettings: () => this.openSettings(),
     });
+    const map = new FloorMap(
+      this.store,
+      { close: () => this.closeOverlay(), warp: (id) => void this.warpTo(id) },
+      () => ({ x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw }),
+    );
+    const settings = new SettingsPanel(this.store, {
+      update: (patch) => this.updateSettings(patch),
+      close: () => this.closeOverlay(),
+      resetProgress: () => this.resetProgress(),
+    });
+    const touch = new TouchControls(this.store, this.input, this.touch);
     const hud = (this.hud = new Hud(this.store, {
       viewNearby: () => {
         const near = this.store.get().nearbyExhibitId as ExhibitId | null;
         if (near) void this.openExhibit(near);
       },
+      openMap: () => this.openMap(),
+      openSettings: () => this.openSettings(),
     }));
     const panel = new ExhibitPanel(
       this.store,
@@ -354,7 +491,16 @@ export class App {
         toggleDemo: () => this.toggleDemo(),
       },
     );
-    this.uiRoot.append(hud.el, panel.el, pause.el, start.el, loading.el);
+    this.uiRoot.append(
+      hud.el,
+      touch.el,
+      panel.el,
+      pause.el,
+      map.el,
+      settings.el,
+      start.el,
+      loading.el,
+    );
   }
 
   private bindEvents(): void {
@@ -375,6 +521,17 @@ export class App {
   private onKey(e: KeyboardEvent): void {
     const s = this.store.get();
     if (e.repeat) return;
+    if (s.mode === 'map' || s.mode === 'settings') {
+      if (e.code === 'Escape' || (e.code === 'KeyM' && s.mode === 'map')) this.closeOverlay();
+      return;
+    }
+    if (
+      e.code === 'KeyM' &&
+      (s.mode === 'walking' || s.mode === 'viewing' || s.mode === 'paused')
+    ) {
+      this.openMap();
+      return;
+    }
     if (s.mode === 'walking') {
       if (e.code === 'KeyE' && s.nearbyExhibitId) {
         void this.openExhibit(s.nearbyExhibitId as ExhibitId);
@@ -500,6 +657,18 @@ export class App {
     }
   }
 
+  /** 「自動」画質: 低い FPS が続いたら 1 段下げる（§10） */
+  private autoQuality(dt: number): void {
+    const s = this.store.get();
+    if (s.settings.quality !== 'auto' || (s.mode !== 'walking' && s.mode !== 'viewing')) return;
+    if (this.loop.fps < AUTO_QUALITY_FPS) this.slowTime += dt;
+    else this.slowTime = Math.max(0, this.slowTime - dt * 2);
+    if (this.slowTime < AUTO_QUALITY_SECONDS) return;
+    this.slowTime = 0;
+    const i = QUALITY_ORDER.indexOf(s.quality);
+    if (i > 0) this.setQuality(QUALITY_ORDER[i - 1]!);
+  }
+
   private updateZone(): void {
     const room = roomAt(this.player.position.x, this.player.position.z);
     if (room) this.store.set({ zoneId: room.zone });
@@ -524,7 +693,9 @@ export class App {
     }
 
     this.player.update(dt, walking);
+    this.audio.update(dt, walking ? this.player.speed : 0);
     this.rig.update();
+    this.autoQuality(dt);
     if (walking) {
       this.updateZone();
       const near = this.exhibits.findNearby(

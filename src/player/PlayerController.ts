@@ -25,6 +25,11 @@ export class PlayerController {
     private readonly getSettings: () => Settings,
   ) {}
 
+  /** 現在の歩く速さ（m/s） */
+  get speed(): number {
+    return this.velocity.length();
+  }
+
   teleport(x: number, z: number, yaw = this.yaw, pitch = 0): void {
     const p = this.collision.resolve({ x, z }, PLAYER_RADIUS);
     this.position.set(p.x, EYE_HEIGHT, p.z);
