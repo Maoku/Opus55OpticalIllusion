@@ -18,6 +18,8 @@ const FACING_DEG = 55;
 const ACTIVE_DISTANCE = 16;
 /** まだ初期化していない展示を、近づいたときに初期化し始める距離（m） */
 const PRELOAD_DISTANCE = 26;
+/** これより遠い展示は描画しない（壁の向こうの展示の描画コールを減らす、§10） */
+const VISIBLE_DISTANCE = 34;
 
 export interface ExhibitEntry {
   id: ExhibitId;
@@ -216,6 +218,7 @@ export class ExhibitManager {
       const d = Math.hypot(e.focus.x - playerPos.x, e.focus.z - playerPos.z);
       if (e.state === 'idle' && d < PRELOAD_DISTANCE) void this.ensureReady(e.id);
       if (e.state !== 'ready') continue;
+      e.group.visible = e.id === activeId || d < VISIBLE_DISTANCE;
       const active = e.id === activeId || d < ACTIVE_DISTANCE;
       if (active !== e.active) {
         e.active = active;
