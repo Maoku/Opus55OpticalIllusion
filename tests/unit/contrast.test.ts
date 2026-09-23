@@ -19,6 +19,8 @@ function contrast(a: string, b: string): number {
 const base = readFileSync('src/styles/base.css', 'utf8');
 const ui = readFileSync('src/styles/ui.css', 'utf8');
 const css = base + ui;
+/** CSS 以外で色を決めているところ（フロアマップの塗り） */
+const sources = css + readFileSync('src/ui/FloorMap.ts', 'utf8');
 const cssVar = (name: string) => {
   const m = css.match(new RegExp(`--${name}:[ \\t]*(#[0-9a-fA-F]{6})`));
   if (!m) throw new Error(`--${name} が見つかりません`);
@@ -45,11 +47,11 @@ describe('UI の文字のコントラスト比が 4.5:1 以上（§7.4）', () =
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('CSS に記載された色を使っている', () => {
+  it('実際に使っている色で検査している', () => {
     for (const [, fg, bg] of pairs) {
       for (const c of [fg, bg]) {
         if (c === '#ffffff' || c === '#141416') continue;
-        expect(css.toLowerCase()).toContain(c.toLowerCase());
+        expect(sources.toLowerCase()).toContain(c.toLowerCase());
       }
     }
   });
