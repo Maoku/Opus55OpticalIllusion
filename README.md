@@ -1,6 +1,18 @@
 # 錯視美術館 — Optical Illusion Museum
 
-ブラウザで歩ける 3D の錯視美術館です。近代的な美術館の中を歩き、錯視をテーマにした 15 の作品（うちオリジナル 4 点）を鑑賞できます。各作品の「見え方のヒント」は最初は隠れていて、ボタンを押すと「どう見える？」「なぜ？」を 2 段階で読めます。多くの作品には、3D ならではの種明かしデモ（「確かめる」）があります。
+遊べるページ: https://maoku.github.io/Opus55OpticalIllusion
+
+ブラウザで歩ける 3D の錯視美術館です。
+
+Optical Illusion シリーズ
+
+- https://github.com/Maoku/GPT6AstraProOpticalIllusion
+- https://github.com/Maoku/Opus5OpticalIllusion
+- https://github.com/Maoku/Fable51OpticalIllusion
+- https://github.com/Maoku/GPT56SolOpticalIllusion
+- https://github.com/Maoku/FableOpticalIllusion
+
+近代的な美術館の中を歩き、錯視をテーマにした 15 の作品（うちオリジナル 4 点）を鑑賞できます。各作品の「見え方のヒント」は最初は隠れていて、ボタンを押すと「どう見える？」「なぜ？」を 2 段階で読めます。多くの作品には、3D ならではの種明かしデモ（「確かめる」）があります。
 
 仕様は [Docs/IMPLEMENTATION_PLAN.md](Docs/IMPLEMENTATION_PLAN.md)、開発規約は [CLAUDE.md](CLAUDE.md) を参照してください。
 
