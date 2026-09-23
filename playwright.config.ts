@@ -2,6 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
 
+/**
+ * E2E_BROWSERS=1 のとき、インストール済みの Google Chrome と Microsoft Edge でも
+ * 主要なテスト（起動・鑑賞とヒント・画素の検証）を実行する
+ */
+const extraBrowsers = process.env.E2E_BROWSERS === '1';
+const crossBrowserSpecs = /(smoke|exhibits|pixels).spec.ts/;
+
 // ヘッドレス環境でも WebGL2 を使えるよう、ソフトウェアレンダラ（SwiftShader）を有効にする
 const webglArgs = [
   '--use-gl=angle',
@@ -35,6 +42,13 @@ export default defineConfig({
       use: { ...devices['iPhone 13'], browserName: 'chromium', defaultBrowserType: 'chromium' },
       testMatch: /mobile\.spec\.ts/,
     },
+    ...(extraBrowsers
+      ? (['chrome', 'msedge'] as const).map((channel) => ({
+          name: channel,
+          testMatch: crossBrowserSpecs,
+          use: { ...devices['Desktop Chrome'], channel, viewport: { width: 1280, height: 720 } },
+        }))
+      : []),
   ],
   webServer: {
     // E2E 用ビルド（debugApi を含む）を作って配信する
