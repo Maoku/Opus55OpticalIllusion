@@ -83,7 +83,18 @@ export interface Exhibit {
   readonly debugPoints?: Record<string, Vec3>;
   /** 鑑賞パネルに追加する操作（例: 残像の「はじめる」） */
   readonly panelActions?: PanelAction[];
+  /** 開発用パネル（?debug）で調整できる値 */
+  readonly tunables?: Tunable[];
   dispose(): void;
+}
+
+export interface Tunable {
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  get(): number;
+  set(value: number): void;
 }
 
 export interface PanelAction {

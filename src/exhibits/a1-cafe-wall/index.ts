@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BaseExhibit } from '../common/BaseExhibit';
 import { createArtCanvas, type ArtCanvas } from '../common/canvasTexture';
 import { createFramedArt } from '../common/frame';
-import type { ExhibitContext, ViewMode } from '../types';
+import type { ExhibitContext, Tunable, ViewMode } from '../types';
 import {
   CAFE_WALL_COLORS,
   CAFE_WALL_DEFAULTS,
@@ -40,6 +40,22 @@ export class CafeWallExhibit extends BaseExhibit {
     depthWrite: false,
   });
   private shift = CAFE_WALL_DEFAULTS.shift;
+  private mortar = CAFE_WALL_DEFAULTS.mortar;
+  readonly tunables: Tunable[] = [
+    {
+      label: '目地の太さ（タイル比）',
+      min: 0.02,
+      max: 0.2,
+      step: 0.005,
+      get: () => this.mortar,
+      set: (v) => {
+        this.mortar = v;
+        this.art?.redraw((c, w, h) =>
+          draw(c, w, h, cafeWallPattern({ shift: this.shift, mortar: v })),
+        );
+      },
+    },
+  ];
 
   constructor() {
     super();
@@ -78,7 +94,7 @@ export class CafeWallExhibit extends BaseExhibit {
   private setShift(shift: number): void {
     if (!this.art || Math.abs(shift - this.shift) < 1e-4) return;
     this.shift = shift;
-    const p = cafeWallPattern({ shift });
+    const p = cafeWallPattern({ shift, mortar: this.mortar });
     this.art.redraw((c, w, h) => draw(c, w, h, p));
   }
 

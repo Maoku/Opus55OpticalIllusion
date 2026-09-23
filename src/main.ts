@@ -9,6 +9,10 @@ const app = new App(container);
 if (import.meta.env.DEV || import.meta.env.MODE === 'e2e') {
   void import('./app/debugApi').then(({ installDebugApi }) => installDebugApi(app));
 }
+// ?debug: stats.js と lil-gui（開発時のみ。本番ビルドには含まれない）
+if (import.meta.env.DEV && app.params.has('debug')) {
+  void import('./app/debugPanel').then(({ installDebugPanel }) => installDebugPanel(app));
+}
 app.init().catch((err: unknown) => {
   console.error(err);
   const msg = document.createElement('p');

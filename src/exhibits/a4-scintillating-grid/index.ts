@@ -1,12 +1,38 @@
 import * as THREE from 'three';
 import { FlatArtExhibit } from '../common/FlatArtExhibit';
-import type { ExhibitContext } from '../types';
-import { GRID_COLORS, gridPattern } from './pattern';
+import type { ExhibitContext, Tunable } from '../types';
+import { GRID_COLORS, GRID_DEFAULTS, gridPattern, type GridOptions } from './pattern';
 
 export class ScintillatingGridExhibit extends FlatArtExhibit {
   readonly id = 'scintillating-grid' as const;
   protected readonly artWidth = 1.9;
   protected readonly aspect = 1;
+  /** 線の太さと円の大きさ（鑑賞距離での見え方に合わせて ?debug で調整する） */
+  private readonly options: GridOptions = { ...GRID_DEFAULTS };
+  readonly tunables: Tunable[] = [
+    {
+      label: '線の太さ（間隔比）',
+      min: 0.06,
+      max: 0.3,
+      step: 0.005,
+      get: () => this.options.lineWidth,
+      set: (v) => {
+        this.options.lineWidth = v;
+        this.repaint();
+      },
+    },
+    {
+      label: '円の直径（線幅比）',
+      min: 1,
+      max: 2.4,
+      step: 0.05,
+      get: () => this.options.discScale,
+      set: (v) => {
+        this.options.discScale = v;
+        this.repaint();
+      },
+    },
+  ];
   /** 拡大鏡の枠（デモ用） */
   private readonly loupe = new THREE.Mesh(
     new THREE.RingGeometry(0.058, 0.066, 48),
@@ -20,7 +46,7 @@ export class ScintillatingGridExhibit extends FlatArtExhibit {
   );
 
   protected paint(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-    const p = gridPattern();
+    const p = gridPattern(this.options);
     const s = w;
     ctx.fillStyle = GRID_COLORS.background;
     ctx.fillRect(0, 0, w, h);
@@ -48,7 +74,7 @@ export class ScintillatingGridExhibit extends FlatArtExhibit {
 
   /** 拡大する交点（中央付近） */
   private focusDisc(): { u: number; v: number } {
-    const p = gridPattern();
+    const p = gridPattern(this.options);
     const mid = p.positions[Math.floor(p.positions.length / 2) - 1]!;
     return { u: mid, v: mid };
   }
