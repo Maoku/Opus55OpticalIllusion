@@ -1,8 +1,11 @@
 # 錯視美術館 — Optical Illusion Museum
 
+![](cm.gif)
+
 遊べるページ: https://maoku.github.io/Opus55OpticalIllusion
 
-ブラウザで歩ける 3D の錯視美術館です。
+ブラウザで歩ける 3D の錯視美術館です。  
+スマホで見る場合は横持ちにしてください。
 
 Optical Illusion シリーズ
 
