@@ -53,7 +53,7 @@ Optical Illusion シリーズ
 
 ## 開発
 
-Node.js 22 以上（CI は 24）を使います。
+Node.js 24.22.1 以降の24系を使います（`nvm use` で `.nvmrc` の指定へ切り替えられます）。
 
 ```bash
 npm install
